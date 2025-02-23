@@ -23,9 +23,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session);
       setSession(session);
       if (session) {
         fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
       }
     });
 
@@ -33,9 +36,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', session);
       setSession(session);
       if (session) {
         fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
       }
     });
 
@@ -43,14 +50,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    console.log('Fetching profile for user:', userId);
     const { data, error } = await supabase
       .from('profiles')
       .select('company_name')
       .eq('id', userId)
       .single();
 
+    console.log('Profile data:', data, 'error:', error);
+
     if (!error && data) {
       setProfile(data);
+    } else {
+      console.error('Error fetching profile:', error);
     }
     setLoading(false);
   };
@@ -69,3 +81,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

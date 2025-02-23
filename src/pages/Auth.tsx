@@ -34,7 +34,7 @@ export default function Auth() {
         
         if (signUpError) throw signUpError;
       } else {
-        const { error: signInError } = await supabase.auth.signIn({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password
         });
@@ -133,3 +133,4 @@ export default function Auth() {
     </div>
   );
 }
+
