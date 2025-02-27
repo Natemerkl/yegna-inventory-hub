@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import AddProduct from './pages/AddProduct';
 import Warehouse from './pages/Warehouse';
 import Orders from './pages/Orders';
 import Categories from './pages/Categories';
@@ -21,6 +23,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/add-product" element={<AddProduct />} />
               <Route path="/warehouse" element={<Warehouse />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/categories" element={<Categories />} />
