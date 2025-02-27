@@ -22,22 +22,23 @@ function Sidebar() {
   const { profile } = useAuth();
 
   return (
-    <div className={`bg-[#1a1c23] text-white ${isCollapsed ? 'w-20' : 'w-64'} flex flex-col transition-all duration-300`}>
+    <div className={`bg-[#1a1c23] text-white ${isCollapsed ? 'w-20' : 'w-64'} flex flex-col transition-all duration-300 h-screen`}>
       <div className="p-4 flex items-center justify-between">
         <div className={`flex items-center space-x-2 ${isCollapsed ? 'hidden' : ''}`}>
           <Store className="h-8 w-8 text-orange-500 flex-shrink-0" />
-          <span className="text-xl font-bold truncate">{profile?.company_name || 'Loading...'}</span>
+          <span className="text-xl font-bold truncate">{profile?.company_name || 'YEGNA-INVENTORY'}</span>
         </div>
         <Store className={`h-8 w-8 text-orange-500 flex-shrink-0 ${isCollapsed ? 'block' : 'hidden'}`} />
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1 hover:bg-gray-700 rounded-lg"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
       </div>
 
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <div className="mb-4">
           <p className={`text-gray-400 text-xs uppercase tracking-wider mb-2 ${isCollapsed ? 'hidden' : ''}`}>GENERAL</p>
           <NavLink to="/" className={({ isActive }) => 
@@ -48,7 +49,7 @@ function Sidebar() {
           </NavLink>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1 mb-6">
           <NavLink to="/products" className={({ isActive }) => 
             `flex items-center space-x-2 p-2 rounded-lg ${isActive ? 'bg-orange-500' : 'hover:bg-gray-700'}`
           }>
@@ -71,7 +72,7 @@ function Sidebar() {
           </NavLink>
         </div>
 
-        <div className="mt-8">
+        <div className="mb-6">
           <p className={`text-gray-400 text-xs uppercase tracking-wider mb-2 ${isCollapsed ? 'hidden' : ''}`}>USERS</p>
           <div className="space-y-1">
             <NavLink to="/profile" className={({ isActive }) => 
@@ -89,7 +90,7 @@ function Sidebar() {
           </div>
         </div>
 
-        <div className="mt-8">
+        <div>
           <p className={`text-gray-400 text-xs uppercase tracking-wider mb-2 ${isCollapsed ? 'hidden' : ''}`}>OTHER</p>
           <div className="space-y-1">
             <NavLink to="/invoices" className={({ isActive }) => 
