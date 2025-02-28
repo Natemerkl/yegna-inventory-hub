@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Package, Loader2 } from 'lucide-react';
-import { getInventoryItemById, recordSale } from '../services/inventory';
+import { getInventoryItemById, recordSale } from '../services';
 import { useAuth } from '../contexts/AuthContext';
-import type { InventoryItem } from '../services/inventory';
+import type { InventoryItem } from '../services/types';
 
 function RecordSale() {
   const [searchParams] = useSearchParams();

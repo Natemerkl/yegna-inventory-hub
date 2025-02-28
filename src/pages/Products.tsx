@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Package, Edit, Trash2, Eye, Plus, Search } from 'lucide-react';
-import { getInventoryItems, deleteInventoryItem } from '../services/inventory';
+import { getInventoryItems, deleteInventoryItem } from '../services';
 import { useAuth } from '../contexts/AuthContext';
-import type { InventoryItem } from '../services/inventory';
+import type { InventoryItem } from '../services/types';
 
 function Products() {
   const [products, setProducts] = useState<InventoryItem[]>([]);

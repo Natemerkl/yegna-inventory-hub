@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
@@ -6,10 +5,10 @@ import {
   getInventoryItemById, 
   addInventoryItem, 
   updateInventoryItem 
-} from '../services/inventory';
+} from '../services';
 import { uploadProductImage, deleteProductImage } from '../services/imageUpload';
 import { useAuth } from '../contexts/AuthContext';
-import type { InventoryItem } from '../services/inventory';
+import type { InventoryItem } from '../services/types';
 
 function AddProduct() {
   const { id } = useParams<{ id: string }>();
@@ -59,7 +58,6 @@ function AddProduct() {
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
-    // Handle numeric inputs
     if (type === 'number') {
       setProduct({
         ...product,
@@ -72,7 +70,6 @@ function AddProduct() {
       });
     }
     
-    // Clear error for this field when user types
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -86,7 +83,6 @@ function AddProduct() {
       const file = e.target.files[0];
       setImageFile(file);
       
-      // Create a preview
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -143,11 +139,9 @@ function AddProduct() {
     try {
       let updatedImageUrl = product.image_url;
       
-      // Handle image upload if there's a new image
       if (imageFile) {
         setUploading(true);
         
-        // If we're editing and there's already an image, delete the old one
         if (isEditMode && product.image_url) {
           try {
             await deleteProductImage(product.image_url);
@@ -157,7 +151,6 @@ function AddProduct() {
           }
         }
         
-        // Upload the new image
         updatedImageUrl = await uploadProductImage(imageFile);
         setUploading(false);
       }

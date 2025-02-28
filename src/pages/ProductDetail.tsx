@@ -1,11 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Package, Edit, Trash2, Tag, ShoppingCart, Truck, DollarSign
 } from 'lucide-react';
-import { getInventoryItemById, deleteInventoryItem, getSalesByProductId } from '../services/inventory';
-import type { InventoryItem, SaleRecord } from '../services/inventory';
+import { getInventoryItemById, deleteInventoryItem, getSalesByProductId } from '../services';
+import type { InventoryItem, SaleRecord } from '../services/types';
 
 function ProductDetail() {
   const { id } = useParams<{ id: string }>();
