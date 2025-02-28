@@ -1,70 +1,72 @@
 
-import React, { useState, useRef } from 'react';
-import { ArrowLeft, Upload, Plus, Minus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-
-interface ProductVariant {
-  size: string;
-  color: string;
-  stock: number;
-  price: number;
-}
-
-interface CategoryOption {
-  id: string;
-  name: string;
-}
-
-const categories: CategoryOption[] = [
-  { id: '1', name: 'Fashion' },
-  { id: '2', name: 'Electronics' },
-  { id: '3', name: 'Home & Furniture' },
-  { id: '4', name: 'Beauty & Personal Care' },
-];
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, Upload, AlertCircle } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { 
+  addInventoryItem, 
+  updateInventoryItem, 
+  getInventoryItemById, 
+  InventoryItem 
+} from '../services/inventory';
+import { supabase } from '../lib/supabase';
 
 function AddProduct() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isEditMode = Boolean(id);
   
-  const [productData, setProductData] = useState({
-    name: '',
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const [productData, setProductData] = useState<InventoryItem>({
+    product_name: '',
     description: '',
+    sku: '',
     category: '',
-    basePrice: '',
-    tags: '',
+    quantity: 0,
+    price: 0,
+    cost_price: 0,
+    image_url: '',
   });
   
-  const [variants, setVariants] = useState<ProductVariant[]>([
-    { size: 'M', color: 'Black', stock: 100, price: 0 }
-  ]);
-  
-  const [productImage, setProductImage] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  // Fetch product data if in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      fetchProductData(id);
+    }
+  }, [isEditMode, id]);
+
+  const fetchProductData = async (productId: string) => {
+    try {
+      setLoading(true);
+      const data = await getInventoryItemById(productId);
+      setProductData(data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching product:', err);
+      setError('Failed to load product data. Please try again.');
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setProductData({
-      ...productData,
-      [name]: value
-    });
-  };
-
-  const handleVariantChange = (index: number, field: keyof ProductVariant, value: string | number) => {
-    const updatedVariants = [...variants];
-    updatedVariants[index] = {
-      ...updatedVariants[index],
-      [field]: value
-    };
-    setVariants(updatedVariants);
-  };
-
-  const addVariant = () => {
-    setVariants([...variants, { size: 'M', color: 'Black', stock: 100, price: 0 }]);
-  };
-
-  const removeVariant = (index: number) => {
-    if (variants.length > 1) {
-      setVariants(variants.filter((_, i) => i !== index));
+    
+    // Handle numeric values
+    if (name === 'price' || name === 'cost_price' || name === 'quantity') {
+      const numValue = name === 'quantity' ? parseInt(value) : parseFloat(value);
+      setProductData({
+        ...productData,
+        [name]: isNaN(numValue) ? 0 : numValue
+      });
+    } else {
+      setProductData({
+        ...productData,
+        [name]: value
+      });
     }
   };
 
@@ -74,38 +76,85 @@ function AddProduct() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
+    setIsUploading(true);
+    setUploadProgress(0);
     
-    // Create a FileReader to read the file as a data URL
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setProductImage(reader.result as string);
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
-    
-    // In a real application, you would upload the file to a server or Supabase storage
-    // For now, we're just displaying the image preview
+    try {
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `inventory/${fileName}`;
+      
+      // Upload file to Supabase storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('inventory')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          onUploadProgress: (progress) => {
+            const percent = (progress.loaded / progress.total) * 100;
+            setUploadProgress(percent);
+          },
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('inventory')
+        .getPublicUrl(filePath);
+        
+      // Update the product data with the image URL
+      setProductData({
+        ...productData,
+        image_url: publicUrl
+      });
+      
+      setIsUploading(false);
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      setError('Failed to upload image. Please try again.');
+      setIsUploading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Here you would typically send the data to your backend or Supabase
-    console.log('Product Data:', productData);
-    console.log('Variants:', variants);
-    console.log('Product Image:', productImage ? 'Image uploaded' : 'No image');
-    
-    // Show success message
-    alert('Product added successfully!');
-    
-    // Navigate back to products page
-    navigate('/products');
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (isEditMode && id) {
+        // Update existing product
+        await updateInventoryItem(id, productData);
+      } else {
+        // Add new product
+        await addInventoryItem(productData);
+      }
+      
+      // Navigate back to products page
+      navigate('/products');
+    } catch (err) {
+      console.error('Error saving product:', err);
+      setError('Failed to save product. Please try again.');
+      setLoading(false);
+    }
   };
+
+  if (loading && isEditMode) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -115,7 +164,9 @@ function AddProduct() {
             <Link to="/products" className="text-gray-600 hover:text-gray-900">
               <ArrowLeft className="h-5 w-5" />
             </Link>
-            <h1 className="text-xl font-semibold">Add New Product</h1>
+            <h1 className="text-xl font-semibold">
+              {isEditMode ? 'Edit Product' : 'Add New Product'}
+            </h1>
           </div>
           <button 
             type="button"
@@ -127,6 +178,13 @@ function AddProduct() {
         </div>
       </div>
 
+      {error && (
+        <div className="mx-6 mt-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column - Basic info */}
@@ -135,15 +193,15 @@ function AddProduct() {
               <h2 className="text-lg font-medium">Basic Information</h2>
               
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="product_name" className="block text-sm font-medium text-gray-700 mb-1">
                   Product Name*
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
+                  id="product_name"
+                  name="product_name"
                   required
-                  value={productData.name}
+                  value={productData.product_name}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
                   placeholder="Enter product name"
@@ -158,161 +216,108 @@ function AddProduct() {
                   id="description"
                   name="description"
                   rows={4}
-                  value={productData.description}
+                  value={productData.description || ''}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
                   placeholder="Enter product description"
                 ></textarea>
               </div>
 
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                  Category*
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  required
-                  value={productData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">Select a category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label htmlFor="basePrice" className="block text-sm font-medium text-gray-700 mb-1">
-                  Base Price*
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500">$</span>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">
+                    SKU
+                  </label>
                   <input
-                    type="number"
-                    id="basePrice"
-                    name="basePrice"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={productData.basePrice}
+                    type="text"
+                    id="sku"
+                    name="sku"
+                    value={productData.sku || ''}
                     onChange={handleInputChange}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="0.00"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Enter SKU"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    id="category"
+                    name="category"
+                    value={productData.category || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Enter category"
                   />
                 </div>
               </div>
               
-              <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tags (comma separated)
-                </label>
-                <input
-                  type="text"
-                  id="tags"
-                  name="tags"
-                  value={productData.tags}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="shirt, fashion, summer"
-                />
-              </div>
-            </div>
-            
-            {/* Variants */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium">Product Variants</h2>
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="text-orange-500 hover:text-orange-600 flex items-center space-x-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Variant</span>
-                </button>
-              </div>
-              
-              {variants.map((variant, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">Variant #{index + 1}</h3>
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Size
-                      </label>
-                      <input
-                        type="text"
-                        value={variant.size}
-                        onChange={(e) => handleVariantChange(index, 'size', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                      />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                    Selling Price*
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500">$</span>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Color
-                      </label>
-                      <input
-                        type="text"
-                        value={variant.color}
-                        onChange={(e) => handleVariantChange(index, 'color', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Stock Quantity
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={variant.stock}
-                        onChange={(e) => handleVariantChange(index, 'stock', parseInt(e.target.value))}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Price Adjustment
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500">$</span>
-                        </div>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={variant.price}
-                          onChange={(e) => handleVariantChange(index, 'price', parseFloat(e.target.value))}
-                          className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
+                    <input
+                      type="number"
+                      id="price"
+                      name="price"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={productData.price}
+                      onChange={handleInputChange}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                      placeholder="0.00"
+                    />
                   </div>
                 </div>
-              ))}
+                
+                <div>
+                  <label htmlFor="cost_price" className="block text-sm font-medium text-gray-700 mb-1">
+                    Cost Price
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500">$</span>
+                    </div>
+                    <input
+                      type="number"
+                      id="cost_price"
+                      name="cost_price"
+                      min="0"
+                      step="0.01"
+                      value={productData.cost_price || ''}
+                      onChange={handleInputChange}
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantity*
+                  </label>
+                  <input
+                    type="number"
+                    id="quantity"
+                    name="quantity"
+                    required
+                    min="0"
+                    value={productData.quantity}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
             </div>
           </div>
           
@@ -323,37 +328,47 @@ function AddProduct() {
               
               <div 
                 className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 
-                ${productImage ? 'border-orange-300 bg-orange-50' : 'border-gray-300 hover:border-orange-300'}`}
+                ${productData.image_url ? 'border-orange-300 bg-orange-50' : 'border-gray-300 hover:border-orange-300'}`}
               >
-                {productImage ? (
+                {productData.image_url ? (
                   <div className="relative w-full h-full">
                     <img 
-                      src={productImage} 
+                      src={productData.image_url} 
                       alt="Product preview" 
                       className="w-full h-full object-contain" 
                     />
                     <button
                       type="button"
-                      onClick={() => setProductImage(null)}
+                      onClick={() => setProductData({...productData, image_url: ''})}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                     >
-                      <Minus className="h-4 w-4" />
+                      <span className="h-4 w-4 block">×</span>
                     </button>
                   </div>
                 ) : (
                   <>
                     <Upload className="h-12 w-12 text-gray-400 mb-4" />
                     <p className="text-sm text-gray-500 text-center mb-4">
-                      Drag and drop your product image here, or click to select a file
+                      {isUploading 
+                        ? `Uploading: ${Math.round(uploadProgress)}%` 
+                        : 'Drag and drop your product image here, or click to select a file'}
                     </p>
-                    <button
-                      type="button"
-                      onClick={openFileSelector}
-                      className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                      disabled={uploading}
-                    >
-                      {uploading ? 'Uploading...' : 'Select Image'}
-                    </button>
+                    {isUploading ? (
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-orange-500 h-2.5 rounded-full" 
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={openFileSelector}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                      >
+                        Select Image
+                      </button>
+                    )}
                   </>
                 )}
                 <input
@@ -372,9 +387,14 @@ function AddProduct() {
             <div className="pt-4 mt-auto">
               <button
                 type="submit"
-                className="w-full px-4 py-3 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors"
+                disabled={loading}
+                className={`w-full px-4 py-3 font-medium rounded-lg transition-colors ${
+                  loading
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-orange-500 text-white hover:bg-orange-600'
+                }`}
               >
-                Add Product
+                {loading ? 'Saving...' : isEditMode ? 'Update Product' : 'Add Product'}
               </button>
             </div>
           </div>

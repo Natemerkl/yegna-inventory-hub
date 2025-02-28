@@ -6,6 +6,8 @@ import TopBar from './components/TopBar';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import AddProduct from './pages/AddProduct';
+import ProductDetail from './pages/ProductDetail';
+import RecordSale from './pages/RecordSale';
 import Warehouse from './pages/Warehouse';
 import Orders from './pages/Orders';
 import Categories from './pages/Categories';
@@ -24,6 +26,9 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/products" element={<Products />} />
               <Route path="/add-product" element={<AddProduct />} />
+              <Route path="/products/edit/:id" element={<AddProduct />} />
+              <Route path="/products/view/:id" element={<ProductDetail />} />
+              <Route path="/sales/new" element={<RecordSale />} />
               <Route path="/warehouse" element={<Warehouse />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/categories" element={<Categories />} />

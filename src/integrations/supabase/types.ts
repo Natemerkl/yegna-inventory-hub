@@ -9,6 +9,59 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      inventory: {
+        Row: {
+          category: string | null
+          cost_price: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          price: number
+          product_name: string
+          profile_id: string
+          quantity: number
+          sku: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          price: number
+          product_name: string
+          profile_id: string
+          quantity?: number
+          sku?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number
+          product_name?: string
+          profile_id?: string
+          quantity?: number
+          sku?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_name: string
@@ -29,6 +82,51 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      sales: {
+        Row: {
+          customer_name: string | null
+          id: string
+          inventory_id: string
+          profile_id: string
+          quantity_sold: number
+          sale_date: string | null
+          sale_price: number
+        }
+        Insert: {
+          customer_name?: string | null
+          id?: string
+          inventory_id: string
+          profile_id: string
+          quantity_sold: number
+          sale_date?: string | null
+          sale_price: number
+        }
+        Update: {
+          customer_name?: string | null
+          id?: string
+          inventory_id?: string
+          profile_id?: string
+          quantity_sold?: number
+          sale_date?: string | null
+          sale_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
