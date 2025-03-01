@@ -74,3 +74,41 @@ export const deleteInventoryItem = async (id: string) => {
   
   return true;
 };
+
+// New function to mark an item as sold and update quantity
+export const markItemAsSold = async (id: string, quantitySold: number) => {
+  // First get the current item to check available quantity
+  const { data: item, error: fetchError } = await supabase
+    .from('inventory')
+    .select('quantity')
+    .eq('id', id)
+    .single();
+  
+  if (fetchError) {
+    console.error('Error fetching inventory item for sale:', fetchError);
+    throw fetchError;
+  }
+  
+  if (item.quantity < quantitySold) {
+    throw new Error(`Not enough items in stock. Only ${item.quantity} available.`);
+  }
+  
+  const newQuantity = item.quantity - quantitySold;
+  
+  const { data, error } = await supabase
+    .from('inventory')
+    .update({ 
+      quantity: newQuantity,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select();
+  
+  if (error) {
+    console.error('Error marking item as sold:', error);
+    throw error;
+  }
+  
+  // Return the updated item
+  return data[0];
+};
