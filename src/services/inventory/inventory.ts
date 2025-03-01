@@ -33,6 +33,12 @@ export const getInventoryItemById = async (id: string) => {
 };
 
 export const addInventoryItem = async (item: InventoryItem) => {
+  // Ensure profile_id is set
+  if (!item.profile_id) {
+    console.error('Profile ID is required');
+    throw new Error('Profile ID is required');
+  }
+
   const { data, error } = await supabase
     .from('inventory')
     .insert([item])
