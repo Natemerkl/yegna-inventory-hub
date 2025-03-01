@@ -33,10 +33,13 @@ export const getInventoryItemById = async (id: string) => {
 };
 
 export const addInventoryItem = async (item: InventoryItem) => {
-  // Ensure profile_id is set
+  // Ensure profile_id is set before sending to database
   if (!item.profile_id) {
-    console.error('Profile ID is required');
-    throw new Error('Profile ID is required');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    item.profile_id = user.id;
   }
 
   const { data, error } = await supabase
